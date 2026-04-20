@@ -1,0 +1,143 @@
+# 数据输出目录
+data_root = "../data"
+
+# 默认时区，同时用于 Open-Meteo 查询和本地日期计算
+timezone = "Asia/Shanghai"
+
+# 请求超时和请求间隔
+request_timeout_seconds = 60
+request_sleep_seconds = 0.2
+
+# 预报跨度
+forecast_days = 16
+
+# 历史天气预报快照回填时的时间间隔，单位小时
+forecast_snapshot_backfill_interval_hours = 6
+
+# 历史实况天气回填时的分块天数
+actual_backfill_chunk_days = 30
+
+# 没有历史水位时，首次自动补最近多少天的实况天气
+actual_lookback_days_if_empty = 7
+
+# 实时预报快照的最小抓取间隔，单位分钟；为 0 表示不限制
+min_forecast_interval_minutes = 0
+
+hourly_variables = [
+  "temperature_2m",
+  "relative_humidity_2m",
+  "dew_point_2m",
+  "apparent_temperature",
+  "precipitation",
+  "rain",
+  "showers",
+  "snowfall",
+  "precipitation_probability",
+  "weather_code",
+  "cloud_cover",
+  "surface_pressure",
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "wind_gusts_10m",
+  "shortwave_radiation",
+]
+
+daily_variables = [
+  "temperature_2m_max",
+  "temperature_2m_min",
+  "precipitation_sum",
+  "wind_speed_10m_max",
+  "sunrise",
+  "sunset",
+]
+
+[[regions]]
+id = "nanjing"
+name = "Nanjing"
+name_cn = "南京"
+latitude = 32.0603
+longitude = 118.7969
+
+[[regions]]
+id = "suzhou"
+name = "Suzhou"
+name_cn = "苏州"
+latitude = 31.2989
+longitude = 120.5853
+
+[[regions]]
+id = "wuxi"
+name = "Wuxi"
+name_cn = "无锡"
+latitude = 31.4900
+longitude = 120.3119
+
+[[regions]]
+id = "changzhou"
+name = "Changzhou"
+name_cn = "常州"
+latitude = 31.8107
+longitude = 119.9737
+
+[[regions]]
+id = "nantong"
+name = "Nantong"
+name_cn = "南通"
+latitude = 31.9802
+longitude = 120.8943
+
+[[regions]]
+id = "yangzhou"
+name = "Yangzhou"
+name_cn = "扬州"
+latitude = 32.3936
+longitude = 119.4127
+
+[[regions]]
+id = "zhenjiang"
+name = "Zhenjiang"
+name_cn = "镇江"
+latitude = 32.1878
+longitude = 119.4250
+
+[[regions]]
+id = "taizhou_js"
+name = "Taizhou"
+name_cn = "泰州"
+latitude = 32.4555
+longitude = 119.9255
+
+[[regions]]
+id = "yancheng"
+name = "Yancheng"
+name_cn = "盐城"
+latitude = 33.3498
+longitude = 120.1573
+
+[[regions]]
+id = "huaian"
+name = "Huai'an"
+name_cn = "淮安"
+latitude = 33.5973
+longitude = 119.0213
+
+[[regions]]
+id = "lianyungang"
+name = "Lianyungang"
+name_cn = "连云港"
+latitude = 34.5967
+longitude = 119.2229
+
+[[regions]]
+id = "xuzhou"
+name = "Xuzhou"
+name_cn = "徐州"
+latitude = 34.2044
+longitude = 117.2858
+
+[[regions]]
+id = "suqian"
+name = "Suqian"
+name_cn = "宿迁"
+latitude = 33.9630
+longitude = 118.2752
