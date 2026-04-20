@@ -60,13 +60,13 @@ python -m power_load_forecasting sync
 ### 4. 回填历史实况天气
 
 ```bash
-python -m power_load_forecasting backfill-actual --start-date 2023-01-01
+python -m power_load_forecasting backfill-actual --start-date 2024-01-01
 ```
 
 ### 5. 回填历史天气预报快照
 
 ```bash
-python -m power_load_forecasting backfill-forecast-snapshots --start-date 2024-01-01 --end-date 2026-04-20
+python -m power_load_forecasting backfill-forecast-snapshots --start-date 2025-10-01 --end-date 2026-04-20
 ```
 
 如果你想更高频地回填 run，可以显式指定间隔小时数：
