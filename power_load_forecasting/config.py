@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tomllib
 from zoneinfo import ZoneInfo
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib
 
 from .models import (
     CollectorConfig,
