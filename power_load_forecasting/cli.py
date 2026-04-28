@@ -29,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "sync",
-        help="抓取一版预报快照，并同步缺失的历史实况天气。",
+        help="抓取最新预报快照，并同步缺失的历史实况天气。",
     )
 
     backfill_actual = subparsers.add_parser(
@@ -41,17 +41,43 @@ def build_parser() -> argparse.ArgumentParser:
 
     backfill_forecast = subparsers.add_parser(
         "backfill-forecast-snapshots",
-        help="按历史运行时刻回填天气预报快照。",
+        help="低频全局回填历史预报快照。",
     )
-    backfill_forecast.add_argument("--start-date", required=True, help="开始日期，格式 YYYY-MM-DD")
+    backfill_forecast.add_argument(
+        "--start-date",
+        default=None,
+        help="低频全局回补开始日期，默认读取配置文件。",
+    )
     backfill_forecast.add_argument("--end-date", default=None, help="结束日期，格式 YYYY-MM-DD")
     backfill_forecast.add_argument(
         "--interval-hours",
         type=int,
         default=None,
-        help="历史快照回填间隔小时数，默认读取配置文件。",
+        help="低频全局回补间隔小时数，默认读取配置文件。",
     )
     backfill_forecast.add_argument(
+        "--force",
+        action="store_true",
+        help="即使目标快照已存在，也重新抓取并覆盖。",
+    )
+
+    backfill_forecast_window = subparsers.add_parser(
+        "backfill-forecast-window",
+        help="高频局部窗口历史预报快照回补。",
+    )
+    backfill_forecast_window.add_argument("--start-date", required=True, help="开始日期，格式 YYYY-MM-DD")
+    backfill_forecast_window.add_argument(
+        "--end-date",
+        default=None,
+        help="结束日期，格式 YYYY-MM-DD，默认等于 start-date。",
+    )
+    backfill_forecast_window.add_argument(
+        "--interval-hours",
+        type=int,
+        default=None,
+        help="高频局部窗口回补间隔小时数，默认读取配置文件。",
+    )
+    backfill_forecast_window.add_argument(
         "--force",
         action="store_true",
         help="即使目标快照已存在，也重新抓取并覆盖。",
@@ -91,11 +117,26 @@ def main(argv: list[str] | None = None) -> int:
             return _exit_code_from_backfill(result)
 
         if args.command == "backfill-forecast-snapshots":
-            start_date = date.fromisoformat(args.start_date)
+            start_date = date.fromisoformat(args.start_date) if args.start_date else None
             end_date = date.fromisoformat(args.end_date) if args.end_date else None
-            if end_date is not None and start_date > end_date:
+            if start_date is not None and end_date is not None and start_date > end_date:
                 raise ValueError("start-date 不能晚于 end-date")
             result = service.backfill_forecast_snapshots(
+                start_date=start_date,
+                end_date=end_date,
+                interval_hours=args.interval_hours,
+                force=args.force,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return _exit_code_from_backfill(result)
+
+        if args.command == "backfill-forecast-window":
+            start_date = date.fromisoformat(args.start_date)
+            end_date = date.fromisoformat(args.end_date) if args.end_date else None
+            effective_end_date = end_date or start_date
+            if start_date > effective_end_date:
+                raise ValueError("start-date 不能晚于 end-date")
+            result = service.backfill_forecast_snapshot_window(
                 start_date=start_date,
                 end_date=end_date,
                 interval_hours=args.interval_hours,

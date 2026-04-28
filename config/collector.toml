@@ -1,26 +1,25 @@
-# 数据输出目录
+# Data output directory
 data_root = "../data"
 
-# 默认时区，同时用于 Open-Meteo 查询和本地日期计算
+# Default timezone used for API queries and local calendar calculations
 timezone = "Asia/Shanghai"
 
-# 请求超时和请求间隔
+# HTTP request controls
 request_timeout_seconds = 60
 request_sleep_seconds = 0.2
+historical_forecast_request_sleep_seconds = 3.0
 
-# 预报跨度
+# Forecast settings
 forecast_days = 16
+forecast_snapshot_backfill_default_start_date = "2026-01-01"
+forecast_snapshot_backfill_interval_hours = 168
+forecast_snapshot_window_interval_hours = 6
 
-# 历史天气预报快照回填时的时间间隔，单位小时
-forecast_snapshot_backfill_interval_hours = 6
-
-# 历史实况天气回填时的分块天数
+# Actual backfill settings
 actual_backfill_chunk_days = 30
-
-# 没有历史水位时，首次自动补最近多少天的实况天气
 actual_lookback_days_if_empty = 7
 
-# 实时预报快照的最小抓取间隔，单位分钟；为 0 表示不限制
+# Real-time forecast sampling guard. 0 disables the guard.
 min_forecast_interval_minutes = 0
 
 hourly_variables = [

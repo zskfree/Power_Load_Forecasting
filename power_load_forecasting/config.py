@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -32,9 +33,19 @@ def load_config(config_path: str | Path) -> CollectorConfig:
         timezone=timezone,
         request_timeout_seconds=int(raw.get("request_timeout_seconds", 60)),
         request_sleep_seconds=float(raw.get("request_sleep_seconds", 0.2)),
+        historical_forecast_request_sleep_seconds=float(
+            raw.get("historical_forecast_request_sleep_seconds", 3.0)
+        ),
         forecast_days=int(raw.get("forecast_days", 16)),
+        forecast_snapshot_backfill_default_start_date=_read_date(
+            raw.get("forecast_snapshot_backfill_default_start_date", "2026-01-01"),
+            field_name="forecast_snapshot_backfill_default_start_date",
+        ),
         forecast_snapshot_backfill_interval_hours=int(
-            raw.get("forecast_snapshot_backfill_interval_hours", 6)
+            raw.get("forecast_snapshot_backfill_interval_hours", 168)
+        ),
+        forecast_snapshot_window_interval_hours=int(
+            raw.get("forecast_snapshot_window_interval_hours", 6)
         ),
         actual_backfill_chunk_days=int(raw.get("actual_backfill_chunk_days", 30)),
         actual_lookback_days_if_empty=int(raw.get("actual_lookback_days_if_empty", 7)),
@@ -81,6 +92,16 @@ def _read_timezone(value: str) -> str:
         raise ValueError("时区配置不能为空。")
     ZoneInfo(timezone_name)
     return timezone_name
+
+
+def _read_date(value, field_name: str) -> date:
+    text = str(value).strip()
+    if not text:
+        raise ValueError(f"{field_name} cannot be empty")
+    try:
+        return date.fromisoformat(text)
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must use YYYY-MM-DD format") from exc
 
 
 def _read_regions(raw_regions, default_timezone: str) -> list[RegionConfig]:

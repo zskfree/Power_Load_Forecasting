@@ -100,11 +100,19 @@ class WeatherCollectorService:
 
     def backfill_forecast_snapshots(
         self,
-        start_date: date,
+        start_date: date | None,
         end_date: date | None,
         interval_hours: int | None = None,
         force: bool = False,
     ) -> list[dict]:
+        return self._backfill_forecast_snapshots(
+            mode="global",
+            start_date=start_date or self.config.forecast_snapshot_backfill_default_start_date,
+            end_date=end_date,
+            interval_hours=interval_hours or self.config.forecast_snapshot_backfill_interval_hours,
+            force=force,
+        )
+
         effective_interval = interval_hours or self.config.forecast_snapshot_backfill_interval_hours
         results: list[dict] = []
 
@@ -195,6 +203,21 @@ class WeatherCollectorService:
 
         return results
 
+    def backfill_forecast_snapshot_window(
+        self,
+        start_date: date,
+        end_date: date | None,
+        interval_hours: int | None = None,
+        force: bool = False,
+    ) -> list[dict]:
+        return self._backfill_forecast_snapshots(
+            mode="window",
+            start_date=start_date,
+            end_date=end_date or start_date,
+            interval_hours=interval_hours or self.config.forecast_snapshot_window_interval_hours,
+            force=force,
+        )
+
     def status(self) -> dict:
         state = self.metadata.load()
         payload_regions: list[dict] = []
@@ -283,7 +306,7 @@ class WeatherCollectorService:
             hourly_variables=self.config.hourly_variables,
             daily_variables=self.config.daily_variables,
         )
-        self._pause()
+        self._pause(self.config.historical_forecast_request_sleep_seconds)
         return self._store_forecast_snapshot(
             region=region,
             payload=payload,
@@ -484,9 +507,109 @@ class WeatherCollectorService:
             "daily_rows": int(len(daily_frame)),
         }
 
-    def _pause(self) -> None:
-        if self.config.request_sleep_seconds > 0:
-            time.sleep(self.config.request_sleep_seconds)
+    def _pause(self, seconds: float | None = None) -> None:
+        pause_seconds = self.config.request_sleep_seconds if seconds is None else seconds
+        if pause_seconds > 0:
+            time.sleep(pause_seconds)
+
+    def _backfill_forecast_snapshots(
+        self,
+        mode: str,
+        start_date: date,
+        end_date: date | None,
+        interval_hours: int,
+        force: bool,
+    ) -> list[dict]:
+        results: list[dict] = []
+
+        for region in self.config.regions:
+            region_end_date = end_date or local_today(region.timezone)
+            now_local = utc_now().astimezone(ZoneInfo(region.timezone))
+            summary = {
+                "mode": mode,
+                "region_id": region.id,
+                "region_name": region.name,
+                "status": "ok",
+                "start_date": start_date.isoformat(),
+                "end_date": region_end_date.isoformat(),
+                "interval_hours": interval_hours,
+                "requested_runs": 0,
+                "fetched_runs": 0,
+                "skipped_existing_runs": 0,
+                "error_runs": 0,
+                "first_issue_time_utc": None,
+                "last_issue_time_utc": None,
+                "sample_errors": [],
+            }
+
+            if start_date > region_end_date:
+                summary["status"] = "skipped"
+                summary["reason"] = "empty_range"
+                results.append(summary)
+                continue
+
+            for issue_time_local_naive in iter_issue_times(
+                start_date,
+                region_end_date,
+                interval_hours,
+            ):
+                issue_time_local = issue_time_local_naive.replace(tzinfo=ZoneInfo(region.timezone))
+                if issue_time_local > now_local:
+                    continue
+
+                summary["requested_runs"] += 1
+                issue_time_utc = issue_time_local.astimezone(timezone.utc)
+                issue_date_local = issue_time_local.date().isoformat()
+
+                if summary["first_issue_time_utc"] is None:
+                    summary["first_issue_time_utc"] = issue_time_utc.isoformat()
+                summary["last_issue_time_utc"] = issue_time_utc.isoformat()
+
+                if (
+                    not force
+                    and self.storage.snapshot_exists(
+                        dataset="weather_forecast_hourly",
+                        region_id=region.id,
+                        issue_time_utc=issue_time_utc,
+                        issue_date_local=issue_date_local,
+                    )
+                ):
+                    summary["skipped_existing_runs"] += 1
+                    continue
+
+                try:
+                    self.capture_historical_forecast_snapshot(region, issue_time_local)
+                    summary["fetched_runs"] += 1
+                except Exception as exc:
+                    LOGGER.exception(
+                        "鍘嗗彶澶╂皵棰勬姤蹇収鎶撳彇澶辫触锛宺egion=%s issue_time_utc=%s mode=%s",
+                        region.id,
+                        issue_time_utc.isoformat(),
+                        mode,
+                    )
+                    summary["error_runs"] += 1
+                    if len(summary["sample_errors"]) < 5:
+                        summary["sample_errors"].append(
+                            {
+                                "issue_time_utc": issue_time_utc.isoformat(),
+                                "error": str(exc),
+                            }
+                        )
+
+            if summary["error_runs"] > 0 and summary["fetched_runs"] == 0:
+                summary["status"] = "error"
+            elif summary["error_runs"] > 0:
+                summary["status"] = "partial"
+            elif summary["requested_runs"] == 0:
+                summary["status"] = "skipped"
+                summary["reason"] = "no_available_runs"
+            elif summary["fetched_runs"] == 0 and summary["skipped_existing_runs"] > 0:
+                summary["status"] = "skipped"
+                summary["reason"] = "all_runs_already_exist"
+
+            results.append(summary)
+
+        return results
 
 
 def _max_actual_date(hourly_frame: pd.DataFrame, daily_frame: pd.DataFrame) -> date | None:

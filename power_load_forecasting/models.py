@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 
@@ -51,8 +52,11 @@ class CollectorConfig:
     timezone: str
     request_timeout_seconds: int
     request_sleep_seconds: float
+    historical_forecast_request_sleep_seconds: float
     forecast_days: int
+    forecast_snapshot_backfill_default_start_date: date
     forecast_snapshot_backfill_interval_hours: int
+    forecast_snapshot_window_interval_hours: int
     actual_backfill_chunk_days: int
     actual_lookback_days_if_empty: int
     min_forecast_interval_minutes: int
